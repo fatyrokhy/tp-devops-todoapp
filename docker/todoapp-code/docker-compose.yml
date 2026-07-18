@@ -1,0 +1,42 @@
+
+# Ce docker-compose sert UNIQUEMENT a tester l'application en local
+# (sur ta machine) avant de la deployer sur AWS avec Ansible/CI-CD.
+# En production, les 3 conteneurs tournent sur 3 instances EC2 separees.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgresql
+      POSTGRES_PASSWORD: tresor112
+      POSTGRES_DB: todoApp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    environment:
+      PGHOST: db
+      PGUSER: postgresql
+      PGPASSWORD: tresor112
+      PGDATABASE: todoApp
+      PGPORT: 5432
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+
+  frontend:
+      build: ./frontend
+      environment:
+        BACKEND_HOST: backend
+        BACKEND_PORT: 3000
+      depends_on:
+        - backend
+      ports:
+        - "8080:80"
+
+volumes:
+  pgdata:

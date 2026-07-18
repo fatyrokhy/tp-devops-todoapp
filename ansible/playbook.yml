@@ -1,0 +1,13 @@
+---
+- name: Configuration commune a tous les serveurs
+  hosts: all
+  become: yes
+  roles:
+    - common
+    - docker
+
+- name: Configuration specifique au Front (Nginx)
+  hosts: front_group
+  become: yes
+  roles:
+    - nginx

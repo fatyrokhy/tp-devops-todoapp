@@ -1,0 +1,20 @@
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform.lock.hcl
+**/*.tfvars
+**/crash.log
+
+# Node
+**/node_modules/
+**/dist/
+
+# Env / secrets
+.env
+**/.env
+
+# SSH
+*.pem
+todoapp-key
+todoapp-key.pub
