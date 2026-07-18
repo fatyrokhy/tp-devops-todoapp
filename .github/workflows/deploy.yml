@@ -1,0 +1,156 @@
+name: CI/CD Todo App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker/todoapp-code/backend/**'
+      - 'docker/todoapp-code/frontend/**'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'docker/todoapp-code/backend/**'
+            frontend:
+              - 'docker/todoapp-code/frontend/**'
+
+  deploy-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connexion a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build et push de l'image backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/todoapp-code/backend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/todoapp-backend:latest
+
+      - name: Deployer sur l'instance Back (via bastion Front)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.BACK_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          proxy_host: ${{ secrets.FRONT_HOST }}
+          proxy_username: ${{ secrets.SSH_USER }}
+          proxy_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            IMAGE=ghcr.io/${{ github.repository_owner }}/todoapp-backend:latest
+            docker pull $IMAGE
+
+            OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' todoapp-back 2>/dev/null || echo "")
+
+            docker rm -f todoapp-back 2>/dev/null || true
+
+            docker run -d --name todoapp-back --restart always \
+              -e PGHOST=${{ secrets.DB_HOST }} \
+              -e PGUSER=${{ secrets.DB_USER }} \
+              -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e PGDATABASE=${{ secrets.DB_NAME }} \
+              -e PGPORT=5432 \
+              -p 3000:3000 \
+              $IMAGE
+
+            sleep 5
+            if ! curl -sf http://localhost:3000/api/health > /dev/null; then
+              echo "Echec du nouveau conteneur, rollback en cours..."
+              docker rm -f todoapp-back
+              if [ -n "$OLD_IMAGE" ]; then
+                docker run -d --name todoapp-back --restart always \
+                  -e PGHOST=${{ secrets.DB_HOST }} \
+                  -e PGUSER=${{ secrets.DB_USER }} \
+                  -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
+                  -e PGDATABASE=${{ secrets.DB_NAME }} \
+                  -e PGPORT=5432 \
+                  -p 3000:3000 \
+                  $OLD_IMAGE
+              fi
+              exit 1
+            fi
+            echo "Deploiement backend reussi."
+
+  deploy-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connexion a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build et push de l'image frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/todoapp-code/frontend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/todoapp-frontend:latest
+
+      - name: Deployer sur l'instance Front
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.FRONT_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            IMAGE=ghcr.io/${{ github.repository_owner }}/todoapp-frontend:latest
+            docker pull $IMAGE
+
+            OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' todoapp-front 2>/dev/null || echo "")
+
+            docker rm -f todoapp-front 2>/dev/null || true
+
+            docker run -d --name todoapp-front --restart always \
+              -e BACKEND_HOST=${{ secrets.BACK_HOST }} \
+              -e BACKEND_PORT=3000 \
+              -p 8080:80 \
+              $IMAGE
+
+            sleep 3
+            if ! curl -sf http://localhost:8080/ > /dev/null; then
+              echo "Echec du nouveau conteneur, rollback en cours..."
+              docker rm -f todoapp-front
+              if [ -n "$OLD_IMAGE" ]; then
+                docker run -d --name todoapp-front --restart always \
+                  -e BACKEND_HOST=${{ secrets.BACK_HOST }} \
+                  -e BACKEND_PORT=3000 \
+                  -p 8080:80 \
+                  $OLD_IMAGE
+              fi
+              exit 1
+            fi
+            echo "Deploiement frontend reussi."
