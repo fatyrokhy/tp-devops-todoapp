@@ -1,0 +1,6 @@
+---
+ghcr_user: fatyrokhy
+ghcr_token: TON_TOKEN_GITHUB_ICI
+db_user: todo
+db_password: change_me_en_prod
+db_name: tododb

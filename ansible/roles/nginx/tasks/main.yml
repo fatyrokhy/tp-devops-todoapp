@@ -10,3 +10,22 @@
     name: nginx
     state: started
     enabled: yes
+
+- name: Deployer la config du reverse proxy
+  template:
+    src: todoapp.conf.j2
+    dest: /etc/nginx/sites-available/todoapp
+  notify: Recharger Nginx
+
+- name: Activer le site todoapp
+  file:
+    src: /etc/nginx/sites-available/todoapp
+    dest: /etc/nginx/sites-enabled/todoapp
+    state: link
+  notify: Recharger Nginx
+
+- name: Desactiver le site par defaut
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Recharger Nginx

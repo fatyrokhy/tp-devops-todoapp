@@ -85,13 +85,14 @@ resource "aws_security_group" "front" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH uniquement depuis l IP admin
+ # SSH ouvert pour permettre les connexions depuis les runners GitHub Actions (IPs dynamiques)
+  # Authentification protegee par cle privee uniquement (pas de mot de passe possible)
   ingress {
-    description = "SSH depuis admin uniquement"
+    description = "SSH ouvert pour CI/CD GitHub Actions - authentification par cle uniquement"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.admin_ip]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {

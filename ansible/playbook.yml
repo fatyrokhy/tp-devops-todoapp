@@ -6,8 +6,21 @@
     - common
     - docker
 
-- name: Configuration specifique au Front (Nginx)
+- name: Deploiement de la base de donnees
+  hosts: db_group
+  become: yes
+  roles:
+    - app_db
+
+- name: Deploiement du backend
+  hosts: back_group
+  become: yes
+  roles:
+    - app_back
+
+- name: Deploiement du frontend et Nginx
   hosts: front_group
   become: yes
   roles:
+    - app_front
     - nginx

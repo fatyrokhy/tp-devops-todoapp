@@ -1,0 +1,15 @@
+- name: Lancer le conteneur PostgreSQL
+  community.docker.docker_container:
+    name: todoapp-db
+    image: postgres:16-alpine
+    state: started
+    restart_policy: always
+    pull: true
+    env:
+      POSTGRES_USER: "{{ db_user }}"
+      POSTGRES_PASSWORD: "{{ db_password }}"
+      POSTGRES_DB: "{{ db_name }}"
+    volumes:
+      - todoapp_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"

@@ -69,28 +69,28 @@ jobs:
 
             docker rm -f todoapp-back 2>/dev/null || true
 
-            docker run -d --name todoapp-back --restart always \
-              -e PGHOST=${{ secrets.DB_HOST }} \
-              -e PGUSER=${{ secrets.DB_USER }} \
-              -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e PGDATABASE=${{ secrets.DB_NAME }} \
-              -e PGPORT=5432 \
-              -p 3000:3000 \
-              $IMAGE
+            echo "Image utilisee : $IMAGE"
+            docker run -d --name todoapp-back --restart always 
+            -e PGHOST=${{ secrets.DB_HOST }} -e PGUSER=${{ secrets.DB_USER }} 
+            -e PGPASSWORD=${{ secrets.DB_PASSWORD }} -e PGDATABASE=${{ secrets.DB_NAME }} 
+            -e PGPORT=5432 -p 3000:3000 
+            $IMAGE
 
             sleep 5
             if ! curl -sf http://localhost:3000/api/health > /dev/null; then
               echo "Echec du nouveau conteneur, rollback en cours..."
               docker rm -f todoapp-back
               if [ -n "$OLD_IMAGE" ]; then
-                docker run -d --name todoapp-back --restart always \
-                  -e PGHOST=${{ secrets.DB_HOST }} \
-                  -e PGUSER=${{ secrets.DB_USER }} \
-                  -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
-                  -e PGDATABASE=${{ secrets.DB_NAME }} \
-                  -e PGPORT=5432 \
-                  -p 3000:3000 \
-                  $OLD_IMAGE
+              
+              echo "Image utilisee : $IMAGE"
+                docker run -d --name todoapp-back --restart always 
+                -e PGHOST=${{ secrets.DB_HOST }} 
+                -e PGUSER=${{ secrets.DB_USER }} 
+                -e PGPASSWORD=${{ secrets.DB_PASSWORD }} 
+                -e PGDATABASE=${{ secrets.DB_NAME }} 
+                -e PGPORT=5432 
+                -p 3000:3000
+                 $OLD_IMAGE
               fi
               exit 1
             fi
@@ -134,22 +134,25 @@ jobs:
 
             docker rm -f todoapp-front 2>/dev/null || true
 
-            docker run -d --name todoapp-front --restart always \
-              -e BACKEND_HOST=${{ secrets.BACK_HOST }} \
-              -e BACKEND_PORT=3000 \
-              -p 8080:80 \
-              $IMAGE
+            echo "Image utilisee : $IMAGE"
+            docker run -d --name todoapp-front --restart always 
+            -e BACKEND_HOST=${{ secrets.BACK_HOST }} 
+            -e BACKEND_PORT=3000 
+            -p 8080:80 
+            $IMAGE
 
             sleep 3
             if ! curl -sf http://localhost:8080/ > /dev/null; then
               echo "Echec du nouveau conteneur, rollback en cours..."
               docker rm -f todoapp-front
               if [ -n "$OLD_IMAGE" ]; then
-                docker run -d --name todoapp-front --restart always \
-                  -e BACKEND_HOST=${{ secrets.BACK_HOST }} \
-                  -e BACKEND_PORT=3000 \
-                  -p 8080:80 \
-                  $OLD_IMAGE
+
+              echo "Image utilisee : $IMAGE"
+                docker run -d --name todoapp-front --restart always 
+                -e BACKEND_HOST=${{ secrets.BACK_HOST }} 
+                -e BACKEND_PORT=3000 
+                -p 8080:80
+                 $OLD_IMAGE
               fi
               exit 1
             fi

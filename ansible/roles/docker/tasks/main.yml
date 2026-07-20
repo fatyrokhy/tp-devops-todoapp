@@ -31,3 +31,8 @@
     name: ubuntu
     groups: docker
     append: yes
+
+- name: Installer le module Python Docker pour Ansible
+  apt:
+    name: python3-docker
+    state: present

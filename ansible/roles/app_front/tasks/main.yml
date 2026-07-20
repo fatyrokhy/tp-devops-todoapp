@@ -1,0 +1,19 @@
+---
+- name: Se connecter a GHCR
+  community.docker.docker_login:
+    registry_url: ghcr.io
+    username: "{{ ghcr_user }}"
+    password: "{{ ghcr_token }}"
+
+- name: Lancer le conteneur Frontend
+  community.docker.docker_container:
+    name: todoapp-front
+    image: "ghcr.io/{{ ghcr_user }}/todoapp-frontend:latest"
+    state: started
+    restart_policy: always
+    pull: true
+    env:
+      BACKEND_HOST: "{{ hostvars['back'].ansible_host }}"
+      BACKEND_PORT: "3000"
+    ports:
+      - "8080:80"
