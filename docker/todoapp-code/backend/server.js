@@ -1,3 +1,4 @@
+// v2 - test du pipeline CI/CD backend
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
