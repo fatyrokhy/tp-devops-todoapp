@@ -51,6 +51,14 @@ jobs:
 
       - name: Deployer sur l'instance Back (via bastion Front)
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/todoapp-backend:latest
+          DB_HOST_VAL: ${{ secrets.DB_HOST }}
+          DB_USER_VAL: ${{ secrets.DB_USER }}
+          DB_PASSWORD_VAL: ${{ secrets.DB_PASSWORD }}
+          DB_NAME_VAL: ${{ secrets.DB_NAME }}
         with:
           host: ${{ secrets.BACK_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -58,21 +66,21 @@ jobs:
           proxy_host: ${{ secrets.FRONT_HOST }}
           proxy_username: ${{ secrets.SSH_USER }}
           proxy_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GH_TOKEN,GH_ACTOR,IMAGE_NAME,DB_HOST_VAL,DB_USER_VAL,DB_PASSWORD_VAL,DB_NAME_VAL
           script: |
             set -e
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            IMAGE=ghcr.io/${{ github.repository_owner }}/todoapp-backend:latest
-            echo "Image utilisee : $IMAGE"
-            docker pull $IMAGE
+            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+            echo "Image utilisee : $IMAGE_NAME"
+            docker pull "$IMAGE_NAME"
             OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' todoapp-back 2>/dev/null || echo "")
             docker rm -f todoapp-back 2>/dev/null || true
-            docker run -d --name todoapp-back --restart always -e PGHOST=${{ secrets.DB_HOST }} -e PGUSER=${{ secrets.DB_USER }} -e PGPASSWORD=${{ secrets.DB_PASSWORD }} -e PGDATABASE=${{ secrets.DB_NAME }} -e PGPORT=5432 -p 3000:3000 $IMAGE
+            docker run -d --name todoapp-back --restart always -e PGHOST="$DB_HOST_VAL" -e PGUSER="$DB_USER_VAL" -e PGPASSWORD="$DB_PASSWORD_VAL" -e PGDATABASE="$DB_NAME_VAL" -e PGPORT=5432 -p 3000:3000 "$IMAGE_NAME"
             sleep 5
             if ! curl -sf http://localhost:3000/api/health > /dev/null; then
               echo "Echec du nouveau conteneur, rollback en cours..."
               docker rm -f todoapp-back
               if [ -n "$OLD_IMAGE" ]; then
-                docker run -d --name todoapp-back --restart always -e PGHOST=${{ secrets.DB_HOST }} -e PGUSER=${{ secrets.DB_USER }} -e PGPASSWORD=${{ secrets.DB_PASSWORD }} -e PGDATABASE=${{ secrets.DB_NAME }} -e PGPORT=5432 -p 3000:3000 $OLD_IMAGE
+                docker run -d --name todoapp-back --restart always -e PGHOST="$DB_HOST_VAL" -e PGUSER="$DB_USER_VAL" -e PGPASSWORD="$DB_PASSWORD_VAL" -e PGDATABASE="$DB_NAME_VAL" -e PGPORT=5432 -p 3000:3000 "$OLD_IMAGE"
               fi
               exit 1
             fi
@@ -101,25 +109,30 @@ jobs:
 
       - name: Deployer sur l'instance Front
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/todoapp-frontend:latest
+          BACK_HOST_VAL: ${{ secrets.BACK_HOST }}
         with:
           host: ${{ secrets.FRONT_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GH_TOKEN,GH_ACTOR,IMAGE_NAME,BACK_HOST_VAL
           script: |
             set -e
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            IMAGE=ghcr.io/${{ github.repository_owner }}/todoapp-frontend:latest
-            echo "Image utilisee : $IMAGE"
-            docker pull $IMAGE
+            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+            echo "Image utilisee : $IMAGE_NAME"
+            docker pull "$IMAGE_NAME"
             OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' todoapp-front 2>/dev/null || echo "")
             docker rm -f todoapp-front 2>/dev/null || true
-            docker run -d --name todoapp-front --restart always -e BACKEND_HOST=${{ secrets.BACK_HOST }} -e BACKEND_PORT=3000 -p 8080:80 $IMAGE
+            docker run -d --name todoapp-front --restart always -e BACKEND_HOST="$BACK_HOST_VAL" -e BACKEND_PORT=3000 -p 8080:80 "$IMAGE_NAME"
             sleep 3
             if ! curl -sf http://localhost:8080/ > /dev/null; then
               echo "Echec du nouveau conteneur, rollback en cours..."
               docker rm -f todoapp-front
               if [ -n "$OLD_IMAGE" ]; then
-                docker run -d --name todoapp-front --restart always -e BACKEND_HOST=${{ secrets.BACK_HOST }} -e BACKEND_PORT=3000 -p 8080:80 $OLD_IMAGE
+                docker run -d --name todoapp-front --restart always -e BACKEND_HOST="$BACK_HOST_VAL" -e BACKEND_PORT=3000 -p 8080:80 "$OLD_IMAGE"
               fi
               exit 1
             fi
