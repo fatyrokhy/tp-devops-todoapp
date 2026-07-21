@@ -6,6 +6,7 @@
 **/*.tfvars
 **/crash.log
 
+#ansible
 ansible/group_vars/all.yml
 
 # Node

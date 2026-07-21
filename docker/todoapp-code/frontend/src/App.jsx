@@ -38,7 +38,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
-      if (!res.ok) throw new Error("Erreur lors de l'ajout");
+      if (!res.ok) throw new Error("Erreur survenue  lors de l'ajout");
       const newTodo = await res.json();
       setTodos([...todos, newTodo]);
       setText('');
@@ -100,7 +100,7 @@ export default function App() {
         ))}
       </ul>
 
-      {!loading && todos.length === 0 && <p>Aucune tache pour le moment.</p>}
+      {!loading && todos.length === 0 && <p>Aucune tache enregistrer pour le moment.</p>}
     </div>
   );
 }
