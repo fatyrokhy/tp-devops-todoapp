@@ -74,7 +74,7 @@ export default function App() {
 
   return (
     <div className="container">
-      <h1>AMFAShop - Gestion des taches -</h1>
+      <h2>AMFAShop -- Gestion des taches --</h2>
 
       <form onSubmit={addTodo} className="todo-form">
         <input
